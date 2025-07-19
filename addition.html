@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+  <title>Add Products</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    form { margin: 20px; }
+    input, select, button { margin: 10px; padding: 10px; }
+    #imagePreview { max-width: 200px; max-height: 200px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Add a New Product</h1>
+  <form id="productForm">
+    <select id="category" required>
+      <option selected disabled>Select category</option>
+      <option value="arts-crafts">arts-crafts</option>
+      <option value="automobiles">automobiles</option>
+      <option value="content-media">content-media</option>
+      <option value="electronics-gadgets">electronics-gadgets</option>
+      <option value="fashion-wears">fashion-wears</option>
+      <option value="health-beauty">health-beauty</option>
+      <option value="health-fitness">health-fitness</option>
+      <option value="home-office">home-office</option>
+      <option value="marketing-sales">marketing-sales</option>
+      <option value="wealth-finance">wealth-finance</option>
+    </select><br>
+    <input type="file" id="imageUpload" accept="image/*" required><br>
+    <img id="imagePreview" src="" alt="Image Preview"><br>
+    <input type="text" id="title" placeholder="Product title" required><br>
+    <select id="rating" required>
+      <option selected disabled>Select rating</option>
+      <option value="★★★★★">5 stars</option>
+      <option value="★★★★☆">4 stars</option>
+      <option value="★★★☆☆">3 stars</option>
+      <option value="★★☆☆☆">2 stars</option>
+      <option value="★☆☆☆☆">1 star</option>
+    </select><br>
+    <input type="text" id="ratingCount" placeholder="Rating count"><br>
+    <input type="text" id="price" placeholder="Price" required><br>
+    <select id="discountGroup" required>
+      <option selected disabled>Select discount color</option>
+      <option value="none">none</option>
+      <option value="red">Red</option>
+      <option value="orange">Orange</option>
+    </select><br>
+    <input type="number" id="discount" placeholder="Discount"><br>
+    <input type="text" id="description" placeholder="Product description"><br>
+    <input type="url" id="affLink" placeholder="Affiliate link"><br>
+    <button type="submit">Add Product</button>
+  </form>
+  <p id="message"></p>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js';
+
+    // Preview image when selected
+    document.getElementById('imageUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.getElementById('imagePreview').src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Add product with image upload
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const imageFile = document.getElementById('imageUpload').files[0];
+      const title = document.getElementById('title').value;
+      const category = document.getElementById('category').value;
+      const rating = document.getElementById('rating').value;
+      const ratingCount = document.getElementById('ratingCount').value;
+      const price = document.getElementById('price').value;
+      const discountGroup = document.getElementById('discountGroup').value;
+      const discount = document.getElementById('discount').value;
+      const description = document.getElementById('description').value;
+      const affLink = document.getElementById('affLink').value;
+
+      if (!imageFile) {
+        document.getElementById('message').textContent = 'Please select an image!';
+        return;
+      }
+
+      try {
+        // Upload image to Supabase Storage
+        const fileName = `${Date.now()}-${imageFile.name}`; // Unique file name
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, imageFile, { upsert: true });
+        if (uploadError) throw uploadError;
+
+        // Get the public URL of the uploaded image
+        const { data: urlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+        const imageUrl = urlData.publicUrl;
+
+        // Insert product into the Products table with the image URL
+        const { error } = await supabase.from('Products').insert({
+          category,
+          image: imageUrl,
+          title,
+          rating,
+          ratingCount,
+          price,
+          discountGroup,
+          discount: discount ? Number(discount) : 0,
+          description: description || null,
+          affLink: affLink || null,
+          createdAt: new Date().toISOString()
+        });
+        if (error) throw error;
+
+        document.getElementById('message').textContent = 'Yay! Product added!';
+        document.getElementById('productForm').reset();
+        document.getElementById('imagePreview').src = '';
+      } catch (error) {
+        document.getElementById('message').textContent = 'Oops! Error: ' + error.message;
+        console.error('Error adding product:', error);
+      }
+    });
+  </script>
+</body>
+</html>

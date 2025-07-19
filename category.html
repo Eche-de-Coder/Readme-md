@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Categories</title>
+    <link rel="stylesheet" href="styles/category.css" type="text/css" media="all" />
+    <link rel="stylesheet" href="styles/style.css" type="text/css" media="all" />
+</head>
+<body>
+<!-- Hamburger Menu Icon -->
+    <div id="ham-container">
+      <p><b>AffiliateStore</b></p>
+      <button id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <!-- Side Menu Overlay -->
+    <div onclick="closeMenuHandler()" id="menuOverlay"></div>
+    <!-- Side Menu -->
+    <div id="sideMenu">
+      <nav id="sideNav">
+          <a href="index.html" class="side-item">Home</a>
+          <a href="#skills-section" class="side-item">Products</a>
+          <a href="#project" class="side-item">Categories</a>
+          <a href="#service" class="side-item">About us</a>
+          <a href="#contact" class="side-item">Contact</a>
+      </nav>
+      <p>Much love from AffiliateStore™</p>
+    </div>
+    
+    <div class="categories">
+        <div class="category active" data-category="all">All</div>
+        <div class="category" data-category="arts-crafts">Arts and Crafts</div>
+        <div class="category" data-category="automobiles">Automobiles</div>
+        <div class="category" data-category="content-media">Content and Media</div>
+        <div class="category" data-category="electronics-gadgets">Electronics and Gadgets</div>
+        <div class="category" data-category="fashion-wears">Fashion and Wears</div>
+        <div class="category" data-category="health-beauty">Health and Beauty</div>
+        <div class="category" data-category="health-fitness">Health and Fitness</div>
+        <div class="category" data-category="home-office">Home and Office</div>
+        <div class="category" data-category="marketing-sales">Marketing and Sales</div>
+        <div class="category" data-category="wealth-finance">Wealth and Finance</div>
+    </div>
+
+  <section id="products">
+    <div class="container">
+      <div class="products-grid" id="products-grid">
+        <div id="loader-container"><div id="preloader"></div></div>
+        <!-- Products -->
+              
+      </div>
+    </div>
+  </section>
+  
+  <section id="suggest-category">
+    <h3>Suggest a category</h3>
+    <p>Cant find a category?</p>
+    <p>Message us and well add your category as soon as possible</p>
+    <form id="suggest-form">
+       <input type="text" id="category-input" placeholder="input category name"/>
+       <button type="submit" id="category-btn">Send</button>
+    </form>
+  </section>
+  
+      <!--Success modal with animated checkmark-->
+    <div id="successModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="checkmark-animation">
+          <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none" />
+            <path class="checkmark-check" fill="none" d="M14 27l7 7 16-16" />
+          </svg>
+        </div>
+          <h2>Sent!</h2>
+          <p>Thanks for the feedback.</p>
+          <p>we'll find and add your favourite category as soon as possible</p>
+          <button onclick="closeModal()">OK</button>
+      </div>
+    </div>
+
+  <script type="module">
+  import { supabase } from './js/supabase.js';
+  
+  let allProducts = [];
+  
+  async function loadProducts() {
+    const preloader = document.getElementById('preloader');
+    const productsDiv = document.getElementById('products-grid');
+    
+    preloader.style.display = 'block';
+    
+
+    try {
+      const { data, error } = await supabase.from('Products').select('*');
+      console.log('Data:', data, 'Error:', error);
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        productsDiv.innerHTML = '<p>No products yet!</p>';
+      } else {
+        allProducts = data; // Store all products
+        productsDiv.innerHTML = '';
+        data.forEach((product) => {
+          const productDiv = document.createElement('div');
+          productDiv.className = 'product product-card';
+          productDiv.setAttribute('data-category', product.category);
+          productDiv.innerHTML = `
+            <div class="product-image">
+              <img src="${product.image}" alt="${product.title}">
+            </div>
+            <div class="product-content">
+              <h3 class="product-title">${product.title}</h3>
+              <div class="rating">
+                <span class="star">${product.rating}</span>
+                <small class="rating-count">(${product.ratingCount || 0} reviews)</small>
+              </div>
+              <div class="price-container">
+                <p class="product-price">₦${product.price}</p>
+                <span class="${product.discountGroup}"><b>-${product.discount}%</b></span>
+              </div>
+              <p class="product-description">${product.description}</p>
+              <a href="${product.affLink}" class="btn">Buy Now</a>
+            </div>
+          `;
+          productsDiv.appendChild(productDiv);
+          setTimeout(() => {
+            productDiv.classList.add('active');
+          }, 100);
+        });
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      productsDiv.innerHTML = '<p>Error loading products: ' + error.message + '</p>';
+    } finally {
+      clearInterval(interval);
+      preloader.style.display = 'none';
+      filterProducts('all'); // Show all products after loading
+    }
+  }
+  
+  function filterProducts(category) {
+    const products = document.querySelectorAll('.product');
+    products.forEach(product => {
+      const productCategory = product.getAttribute('data-category');
+      if (category === 'all' || productCategory === category) {
+        product.style.display = 'block';
+      } else {
+        product.style.display = 'none';
+      }
+    });
+  }
+  
+  document.querySelectorAll('.category').forEach(category => {
+    category.addEventListener('click', () => {
+      const selectedCategory = category.getAttribute('data-category');
+      document.querySelectorAll('.category').forEach(cat => cat.classList.remove('active'));
+      category.classList.add('active');
+      filterProducts(selectedCategory);
+    });
+  });
+  
+  loadProducts();
+</script>
+  <script src="js/category.js" type="text/javascript"></script>
+  <script src="js/main.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>
